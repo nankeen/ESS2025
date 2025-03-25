@@ -8,25 +8,28 @@
 #include "pwm_driver.h"
 // Hardware timers
 #include "stm32f4xx_hal_tim.h"
+// Hardware interrupt timers
+#include "stm32f4xx_it.h"
 
 // Initialize Timer 4
 TIM_HandleTypeDef TIM_Handle; //define a handle
 
-void TMR4_Init(void) {
+// Initialize Timer 4 for interrupts
+void TMR4_Init_ISR(void) {
   /* Enable clock for TIM4 */
   __TIM4_CLK_ENABLE();
-  TIM_Handle.Instance = TIM4; // Same timer whose clocks we enable
-  // timer_tick_frequency = 16000000 / (4 + 1) = 3200000
+  TIM_Handle.Instance = TIM4; //Same timer whose clocks we enable
+  // timer_tick_frequency = 16000000 / (0 + 1) = 16000000
   TIM_Handle.Init.Prescaler = 0;
   /* Count up */
   TIM_Handle.Init.CounterMode = TIM_COUNTERMODE_UP;
   /*
-    Set timer period when it must reset
-    First you have to know max value for timer
-    In our case it is 16 bit = 65535
-    Frequency = timer_tick_frequency / (TIM_Period + 1)
-    If you get Period larger than max timer value (in our case 65535),
-    you have to choose larger prescaler and slow down timer tick frequency
+  Set timer period when it must reset
+  First you have to know max value for timer
+  In our case it is 16bit = 65535
+  Frequency = timer_tick_frequency / (TIM_Period + 1)
+  If you get Period larger than max timer value (in our case 65535),
+  you have to choose larger prescaler and slow down timer tick frequency
   */
   TIM_Handle.Init.Period = 1599;
   TIM_Handle.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -36,14 +39,20 @@ void TMR4_Init(void) {
   HAL_TIM_Base_Init(&TIM_Handle);
   /* Start count on TIM4 */
   HAL_TIM_Base_Start_IT(&TIM_Handle);
+  /* Enable the TIM4 gloabal Interrupt */
+  HAL_NVIC_SetPriority(TIM4_IRQn, 0, 1);
+  HAL_NVIC_EnableIRQ(TIM4_IRQn);
 }
-// Loops until the timer has expired
-void TMR4_WaitForExpiry(void)
-{
-  // Check the flag. When the timer is expired, the flag is SET.
-  while(__HAL_TIM_GET_FLAG(&TIM_Handle, TIM_FLAG_UPDATE) == RESET){}
-  // Reset flag for next expiry
-__HAL_TIM_CLEAR_FLAG(&TIM_Handle, TIM_FLAG_UPDATE);
+
+// This is triggered when the counter overflows
+void TIM4_IRQHandler(void) {
+  // In case other interrupts are also running
+  if (__HAL_TIM_GET_FLAG(&TIM_Handle, TIM_FLAG_UPDATE) != RESET) {
+    if (__HAL_TIM_GET_ITSTATUS(&TIM_Handle, TIM_IT_UPDATE) != RESET) {
+      __HAL_TIM_CLEAR_FLAG(&TIM_Handle, TIM_FLAG_UPDATE);
+      pwm_driver_update();
+    }
+  }
 }
 
 // GPIO port D
@@ -70,22 +79,13 @@ int main(void) {
 
   // set brightness values
   uint32_t levels[] = {75, 50, 25, 0};
+  for (uint32_t i = 0; i < sizeof(levels) / sizeof(uint32_t); i++) {
+    levels[i] += 1;
+    levels[i] %= 100;
+    pwm_driver_set(i, levels[i]);
+  }
 
-  TMR4_Init();
-  uint32_t i = 0;
+  TMR4_Init_ISR();
   while (1) {
-    TMR4_WaitForExpiry();
-    if (i == 0) {
-      for (uint32_t i = 0; i < sizeof(levels) / sizeof(uint32_t); i++) {
-        levels[i] += 1;
-        levels[i] %= 100;
-        pwm_driver_set(i, levels[i]);
-      }
-    }
-
-    pwm_driver_update();
-
-    i++;
-    i = i % 100;
   }
 }
