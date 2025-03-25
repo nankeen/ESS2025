@@ -15,7 +15,6 @@ struct pwm
 static struct pwm state;
 
 // initialize the pwm driver
-
 void pwm_driver_init(LED_t * channels[])
 {
   // Start counter at zero
