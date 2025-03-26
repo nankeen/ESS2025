@@ -43,7 +43,7 @@ CFLAGS = $(MCU)
 CFLAGS += -Wall -Wextra
 CFLAGS += -g3 -O0 -std=gnu11
 CFLAGS += -ffunction-sections -fdata-sections -fstack-usage
-CFLAGS += -DUSE_HAL_DRIVER -DSTM32F411xE
+CFLAGS += -DUSE_HAL_DRIVER -DSTM32F411xE -DHAL_TIM_MODULE_ENABLED
 
 # AS flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) -Wall -fdata-sections -ffunction-sections
