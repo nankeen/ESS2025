@@ -7,13 +7,12 @@ The following instructions are _only_ for compiling without STM32CubeIDE.
 
 ## Requirements
 
-+ [Open On-Chip-Debugger](https://openocd.org/) - for flashing and debugging the firmware
-+ ARM GNU compiler toolchain - for GCC and GDB
++ [ARM GNU compiler toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain)  - for GCC and GDB
 
 ### Installation with Homebrew
 
 ```bash
-brew install arm-none-eabi-gcc open-ocd
+brew install --cask gcc-arm-embedded
 ```
 
 ## Building
